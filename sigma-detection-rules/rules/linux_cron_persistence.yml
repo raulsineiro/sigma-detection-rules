@@ -1,0 +1,33 @@
+title: Creación o modificación sospechosa de tarea cron
+id: 3c5e7f9a-2b4d-4e6f-8a9b-1c2d3e4f5a6b
+status: experimental
+description: |
+    Detecta la creación o edición de archivos crontab, tanto a nivel de usuario
+    como del sistema (/etc/cron.d, /etc/crontab), o el uso del comando 'crontab -e'.
+    Es una de las técnicas de persistencia más comunes en Linux tras un compromiso,
+    ya que permite re-ejecutar un payload de forma periódica sin intervención manual.
+references:
+    - https://attack.mitre.org/techniques/T1053/003/
+author: Raul Sineiro
+date: 2026-07-03
+tags:
+    - attack.persistence
+    - attack.privilege-escalation
+    - attack.t1053.003
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection_crontab_cmd:
+        Image|endswith: '/crontab'
+        CommandLine|contains: '-e'
+    selection_file_write:
+        TargetFilename|contains:
+            - '/etc/cron.d/'
+            - '/etc/crontab'
+            - '/var/spool/cron/'
+    condition: 1 of selection_*
+falsepositives:
+    - Administradores del sistema programando tareas legítimas
+    - Herramientas de gestión de configuración (Ansible, Puppet, Chef)
+level: medium

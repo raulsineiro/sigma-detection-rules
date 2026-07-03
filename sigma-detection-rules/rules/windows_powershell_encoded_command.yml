@@ -1,0 +1,37 @@
+title: Ejecución de PowerShell con comando codificado en Base64
+id: 7a9b1c3e-5d7f-4a9b-1c3e-4f6a8b0c2d3e
+status: experimental
+description: |
+    Detecta el uso del flag -EncodedCommand (o sus abreviaturas -enc, -e) en
+    PowerShell, técnica ampliamente utilizada por atacantes y frameworks de
+    post-explotación (Empire, Cobalt Strike) para ofuscar comandos maliciosos
+    y evadir la detección basada en firmas de texto plano.
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
+    - https://attack.mitre.org/techniques/T1027/
+author: Raul Sineiro
+date: 2026-07-03
+tags:
+    - attack.execution
+    - attack.defense-evasion
+    - attack.t1059.001
+    - attack.t1027
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection_img:
+        Image|endswith:
+            - '\powershell.exe'
+            - '\pwsh.exe'
+    selection_flag:
+        CommandLine|contains:
+            - '-EncodedCommand'
+            - '-enc '
+            - '-e '
+            - ' -en '
+    condition: selection_img and selection_flag
+falsepositives:
+    - Scripts de administración legítimos que usan codificación por compatibilidad de caracteres
+    - Herramientas de gestión de configuración (SCCM, Intune)
+level: high

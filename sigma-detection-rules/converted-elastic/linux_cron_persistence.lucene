@@ -1,0 +1,1 @@
+(Image:*\/crontab AND CommandLine:*\-e*) OR (TargetFilename:(*\/etc\/cron.d\/* OR *\/etc\/crontab* OR *\/var\/spool\/cron\/*))

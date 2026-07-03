@@ -1,0 +1,48 @@
+title: Fallo de autenticación SSH repetido (posible fuerza bruta)
+id: 8f3a1e2c-4b5d-4a6e-9c7f-1a2b3c4d5e6f
+status: experimental
+description: |
+    Detecta múltiples intentos fallidos de autenticación SSH desde el mismo origen
+    en un periodo corto de tiempo, lo cual es característico de un ataque de
+    fuerza bruta o password spraying contra un servicio SSH expuesto.
+references:
+    - https://attack.mitre.org/techniques/T1110/
+author: Raul Sineiro
+date: 2026-07-03
+tags:
+    - attack.credential-access
+    - attack.t1110
+logsource:
+    product: linux
+    service: sshd
+detection:
+    selection:
+        # Formato estándar de rsyslog/auth.log para intentos fallidos de sshd
+        message|contains: 'Failed password'
+    condition: selection
+falsepositives:
+    - Usuarios legítimos que escriben mal su contraseña varias veces
+    - Escaneos de seguridad autorizados (pentest interno)
+level: medium
+---
+title: Fuerza bruta SSH confirmada (umbral de repetición)
+id: 2b4c6d8e-1f3a-4b5c-8d9e-0a1b2c3d4e5f
+status: experimental
+description: |
+    Correlación que eleva la severidad cuando el mismo origen (source.ip) genera
+    5 o más fallos de autenticación SSH en una ventana de 5 minutos. Este es el
+    umbral que distingue un error humano puntual de un ataque automatizado.
+references:
+    - https://attack.mitre.org/techniques/T1110/
+author: Raul Sineiro
+date: 2026-07-03
+correlation:
+    type: event_count
+    rules:
+        - 8f3a1e2c-4b5d-4a6e-9c7f-1a2b3c4d5e6f
+    group-by:
+        - source.ip
+    timespan: 5m
+    condition:
+        gte: 5
+level: high

@@ -1,0 +1,7 @@
+Jul  3 09:12:01 web01 sshd[14322]: Failed password for root from 185.220.101.45 port 51322 ssh2
+Jul  3 09:12:03 web01 sshd[14324]: Failed password for admin from 185.220.101.45 port 51340 ssh2
+Jul  3 09:12:05 web01 sshd[14326]: Failed password for admin from 185.220.101.45 port 51358 ssh2
+Jul  3 09:12:07 web01 sshd[14328]: Failed password for ubuntu from 185.220.101.45 port 51376 ssh2
+Jul  3 09:12:09 web01 sshd[14330]: Failed password for root from 185.220.101.45 port 51394 ssh2
+Jul  3 09:12:11 web01 sshd[14332]: Failed password for test from 185.220.101.45 port 51412 ssh2
+Jul  3 09:15:22 web01 sshd[14340]: Accepted password for raul from 90.169.12.33 port 42011 ssh2

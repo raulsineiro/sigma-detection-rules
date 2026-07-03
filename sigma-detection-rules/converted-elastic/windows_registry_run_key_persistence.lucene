@@ -1,0 +1,1 @@
+(event.code:13 AND (registry.path:(*\\Software\\Microsoft\\Windows\\CurrentVersion\\Run* OR *\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce*))) AND (NOT (process.executable:(*\\OneDrive.exe OR *\\Teams.exe)))

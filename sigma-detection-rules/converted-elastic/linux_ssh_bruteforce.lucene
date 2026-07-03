@@ -1,0 +1,8 @@
+# Regla base (detección individual de fallo de login)
+message:*Failed\ password*
+
+# NOTA: La parte de correlacion (5+ eventos en 5 min agrupados por source.ip)
+# no es convertible a una query Lucene estatica porque requiere estado/ventana
+# temporal. En un despliegue real de Elastic esto se implementa como una
+# "Threshold Rule" nativa de Kibana Security, usando esta misma query base
+# como filtro y configurando: group by source.ip, threshold >= 5, window 5m.

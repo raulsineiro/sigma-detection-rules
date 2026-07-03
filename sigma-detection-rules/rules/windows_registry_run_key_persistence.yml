@@ -1,0 +1,35 @@
+title: Persistencia vía clave de registro Run/RunOnce
+id: 5d7f9a1c-3b5e-4f7a-9b1c-2d4e6f8a0b1c
+status: experimental
+description: |
+    Detecta la creación de valores en las claves de registro Run/RunOnce, una de
+    las técnicas de persistencia más utilizadas en Windows. Cualquier ejecutable
+    referenciado en estas claves se lanzará automáticamente en cada inicio de
+    sesión, sin necesidad de que el atacante mantenga acceso activo al sistema.
+references:
+    - https://attack.mitre.org/techniques/T1547/001/
+author: Raul Sineiro
+date: 2026-07-03
+tags:
+    - attack.persistence
+    - attack.t1547.001
+logsource:
+    product: windows
+    category: registry_event
+    definition: 'Requiere Sysmon con Event ID 13 (RegistryEvent - Value Set)'
+detection:
+    selection:
+        EventID: 13
+        TargetObject|contains:
+            - '\Software\Microsoft\Windows\CurrentVersion\Run'
+            - '\Software\Microsoft\Windows\CurrentVersion\RunOnce'
+    filter_known_software:
+        # Ajustar esta lista a los procesos legítimos habituales del entorno real
+        Image|endswith:
+            - '\OneDrive.exe'
+            - '\Teams.exe'
+    condition: selection and not filter_known_software
+falsepositives:
+    - Instalación legítima de software que se registra para arrancar con el sistema
+    - Actualizadores automáticos (navegadores, suites ofimáticas)
+level: medium
