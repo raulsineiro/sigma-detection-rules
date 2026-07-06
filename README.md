@@ -76,11 +76,11 @@ usuario `victima` creado al efecto:
 hydra -l victima -P /tmp/passwords.txt ssh://127.0.0.1
 ```
 
-![Ataque con Hydra](images/01-ssh-hydra-attack.png)
+![Ataque con Hydra](images/01-ssh-hydra-attack.jpg)
 
 Cada intento fallido queda registrado en `/var/log/auth.log`:
 
-![Log auth.log](images/01-ssh-auth-log.png)
+![Log auth.log](images/01-ssh-auth-log.jpg)
 
 El patrón `Failed password for <usuario> from <ip>` es exactamente lo que busca la regla base
 (`message|contains: 'Failed password'`).
@@ -93,7 +93,7 @@ sudo grep 'Failed password' /var/log/auth.log \
   | sort | uniq -c | sort -rn
 ```
 
-![Conteo de intentos por IP](images/01-ssh-ip-count.png)
+![Conteo de intentos por IP](images/01-ssh-ip-count.jpg)
 
 En Kibana Security esta parte se implementaría como una **Threshold Rule**, ya que las reglas de
 correlación de Sigma no son convertibles directamente a Lucene (requieren estado y ventana
