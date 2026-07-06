@@ -95,10 +95,6 @@ sudo grep 'Failed password' /var/log/auth.log \
 
 ![Conteo de intentos por IP](images/01-ssh-ip-count.jpg)
 
-En Kibana Security esta parte se implementaría como una **Threshold Rule**, ya que las reglas de
-correlación de Sigma no son convertibles directamente a Lucene (requieren estado y ventana
-temporal).
-
 ### Limitaciones
 
 - La regla solo mira `Failed password`, no `Invalid user` (intentos con cuentas inexistentes).
