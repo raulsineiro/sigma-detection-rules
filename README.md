@@ -1,4 +1,4 @@
-# Sigma Detection Rules
+# 🔍 Sigma Detection Rules
 
 Reglas de detección en formato [Sigma](https://github.com/SigmaHQ/sigma) para 4 técnicas comunes de
 MITRE ATT&CK, cubriendo entornos Linux y Windows. Cada regla incluye su justificación técnica, un
